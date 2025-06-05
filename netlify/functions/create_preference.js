@@ -13,7 +13,7 @@ exports.handler = async (event) => {
     const { nickname, email, produto } = JSON.parse(event.body);
 
     let price = 0;
-    if (produto === 'VIP') price = 10;
+    if (produto === 'VIP') price = 1;
     else if (produto === 'VIP+') price = 25;
     else if (produto === 'VIP+ Permanente') price = 50;
     else throw new Error('Produto inválido');
