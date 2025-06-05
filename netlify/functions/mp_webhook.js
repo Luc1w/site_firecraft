@@ -13,7 +13,8 @@ exports.handler = async (event) => {
 
   try {
     const body = JSON.parse(event.body);
-    const { data, type } = body;
+    const id = body?.data?.id || 'Sem ID';
+    const type = body?.type || 'Desconhecido';
 
     const content = {
       embeds: [
@@ -21,8 +22,8 @@ exports.handler = async (event) => {
           title: '🛒 Nova Compra!',
           color: 0x00ff00,
           fields: [
-            { name: 'ID do Pagamento', value: `${data.id || 'Sem ID'}`, inline: true },
-            { name: 'Tipo', value: `${type || 'Desconhecido'}`, inline: true },
+            { name: 'ID do Pagamento', value: id, inline: true },
+            { name: 'Tipo', value: type, inline: true },
           ],
           timestamp: new Date(),
         },
@@ -37,7 +38,7 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: 'Notificação enviada para o Discord' }),
+      body: JSON.stringify({ message: 'Notificação enviada ao Discord' }),
     };
   } catch (error) {
     console.error('Erro no webhook:', error);
