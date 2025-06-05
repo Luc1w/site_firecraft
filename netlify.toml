@@ -1,0 +1,10 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[context.production.environment]
+  MP_ACCESS_TOKEN       = "APP_USR-948214061850317-040621-6856d556dfbadf51d685348e56800097-1469695485"
+  SITE_URL              = "https://fire-craft.netlify.app/"
+  DISCORD_WEBHOOK_URL   = "https://discord.com/api/webhooks/1379981278128115792/1o1Bo8iYc5IZWACNZzDRN1bLD6TidVscAlNYiTZVrWvVp3qHUfT4e7e5TinvXxtoTcp4"
+
+# Caso queira variáveis diferentes em deploy/develop, adicione seções [context.branch-deploy.environment], etc.
