@@ -1,14 +1,15 @@
 /**
  * create_preference.js
  *
- * Cria uma preferência de pagamento no Mercado Pago usando a classe correta
- * exportada por require("mercadopago").MercadoPago.
+ * Cria uma preferência de pagamento no Mercado Pago, importando
+ * o módulo da forma correta para que `new MercadoPagoSDK(...)` funcione.
  */
 
-const MercadoPagoSDK = require("mercadopago").MercadoPago;
-const mp = new MercadoPagoSDK({
-  access_token: process.env.MP_ACCESS_TOKEN,
-});
+const mpPackage = require("mercadopago");
+const MercadoPagoSDK = mpPackage.default || mpPackage; 
+// Se cair em mpPackage.default (ESM), use isso, senão use mpPackage (CJS).
+
+const mp = new MercadoPagoSDK(process.env.MP_ACCESS_TOKEN);
 
 exports.handler = async function (event) {
   if (event.httpMethod !== "POST") {
@@ -16,15 +17,16 @@ exports.handler = async function (event) {
   }
 
   try {
-    // DEBUG (remova depois):
+    // DEBUG - remova depois
     console.log("create_preference chamado");
-    console.log("MP_ACCESS_TOKEN está definido?", !!process.env.MP_ACCESS_TOKEN);
+    console.log("MP_ACCESS_TOKEN definido?", !!process.env.MP_ACCESS_TOKEN);
     console.log("SITE_URL =", process.env.SITE_URL);
     console.log("Body raw:", event.body);
 
     const { nickname, email, produto } = JSON.parse(event.body);
     console.log("Parâmetros recebidos:", { nickname, email, produto });
 
+    // Define o preço conforme o produto
     let price;
     if (produto === "VIP") price = 10.0;
     else if (produto === "VIP+") price = 25.0;
@@ -54,7 +56,6 @@ exports.handler = async function (event) {
       notification_url: `${process.env.SITE_URL}/.netlify/functions/mp_webhook`,
     };
 
-    // Cria a preferência
     const response = await mp.preferences.create(preference);
     const init_point = response.body.init_point;
 

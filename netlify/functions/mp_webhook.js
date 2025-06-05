@@ -1,20 +1,20 @@
 /**
  * mp_webhook.js
  *
- * Webhook que o Mercado Pago chama quando o pagamento muda de status.
- * Usa a mesma classe MercadoPago exportada por require("mercadopago").MercadoPago.
+ * Recebe notificações do Mercado Pago e envia mensagem ao Discord.
+ * Também importa o SDK ajustando para o formato correto.
  */
 
-const MercadoPagoSDK = require("mercadopago").MercadoPago;
-const mp = new MercadoPagoSDK({
-  access_token: process.env.MP_ACCESS_TOKEN,
-});
+const mpPackage = require("mercadopago");
+const MercadoPagoSDK = mpPackage.default || mpPackage;
+const mp = new MercadoPagoSDK(process.env.MP_ACCESS_TOKEN);
+
 const fetch = require("node-fetch");
 
 exports.handler = async function (event) {
   try {
     const body = JSON.parse(event.body);
-    // Se não for notificação de pagamento, ignora
+
     if (body.type !== "payment") {
       return { statusCode: 200, body: "Evento não é de pagamento" };
     }
@@ -27,7 +27,7 @@ exports.handler = async function (event) {
       return { statusCode: 200, body: "Pagamento não aprovado" };
     }
 
-    // Esperamos que external_reference seja "nickname__timestamp"
+    // Espera que external_reference esteja no formato "nickname__timestamp"
     const [nickname, timestamp] = payment.external_reference.split("__");
     const dataPagamento = new Date(payment.date_approved);
 
