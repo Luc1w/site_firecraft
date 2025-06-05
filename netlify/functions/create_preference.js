@@ -1,88 +1,26 @@
 /**
  * create_preference.js
  *
- * Tenta importar o SDK do Mercado Pago cobrindo várias formas de exportação:
- *  - require("mercadopago").MercadoPago (classe CJS antiga)
- *  - require("mercadopago").default.MercadoPago (ESM)
- *  - require("mercadopago") como objeto flat com configure() ou configurations.setAccessToken()
- *
- * Uma vez inicializado, tenta chamar `preferences.create()` ou `createPreference()`,
- * dependendo do que estiver disponível.
+ * Cria uma preferência de pagamento no Mercado Pago usando
+ * o “flat import” (require("mercadopago")) e chamando direto
+ * mercadopago.preferences.create(...)
  */
 
-const mpPkg = require("mercadopago");
+const mercadopago = require("mercadopago");
 
-// 1) Descobre o “handler” correto para a biblioteca
-let mercadopagoClient;
+// 1) Configura o token de acesso de forma dinâmica:
 const token = process.env.MP_ACCESS_TOKEN;
-
-// (a) Se existir mpPkg.MercadoPago, usamos como classe
-if (mpPkg.MercadoPago && typeof mpPkg.MercadoPago === "function") {
-  mercadopagoClient = new mpPkg.MercadoPago({ access_token: token });
-
-// (b) Se existe mpPkg.default.MercadoPago (ESM em .default), usamos também
+if (typeof mercadopago.configure === "function") {
+  // Versões intermediárias (SDK antigo) usam configure({ access_token: ... })
+  mercadopago.configure({ access_token: token });
 } else if (
-  mpPkg.default &&
-  mpPkg.default.MercadoPago &&
-  typeof mpPkg.default.MercadoPago === "function"
+  mercadopago.configurations &&
+  typeof mercadopago.configurations.setAccessToken === "function"
 ) {
-  mercadopagoClient = new mpPkg.default.MercadoPago({ access_token: token });
-
-// (c) Se mpPkg.default existe diretamente como “cliente” (módulo ESM)
-} else if (mpPkg.default && typeof mpPkg.default === "object") {
-  mercadopagoClient = mpPkg.default;
-  // configurar token via configurações ESM
-  if (
-    mercadopagoClient.configurations &&
-    typeof mercadopagoClient.configurations.setAccessToken === "function"
-  ) {
-    mercadopagoClient.configurations.setAccessToken(token);
-  } else if (typeof mercadopagoClient.configure === "function") {
-    mercadopagoClient.configure({ access_token: token });
-  } else {
-    throw new Error(
-      "SDK Mercado Pago: não encontrou método para setar o token em mpPkg.default"
-    );
-  }
-
-// (d) Se mpPkg for diretamente o objeto “flat” (CJS), configuramos também
-} else if (typeof mpPkg === "object") {
-  mercadopagoClient = mpPkg;
-  if (
-    mercadopagoClient.configurations &&
-    typeof mercadopagoClient.configurations.setAccessToken === "function"
-  ) {
-    mercadopagoClient.configurations.setAccessToken(token);
-  } else if (typeof mercadopagoClient.configure === "function") {
-    mercadopagoClient.configure({ access_token: token });
-  } else {
-    throw new Error(
-      "SDK Mercado Pago: não encontrou método para setar o token em mpPkg"
-    );
-  }
-
+  // Versões mais recentes usam configurations.setAccessToken()
+  mercadopago.configurations.setAccessToken(token);
 } else {
-  throw new Error("Impossível importar SDK Mercado Pago (formato desconhecido)");
-}
-
-// 2) Função “helper” para criar uma preferência, testando várias assinaturas:
-async function criarPreferencia(preferenceData) {
-  // (a) Se existir mercadopagoClient.preferences.create, usamos
-  if (
-    mercadopagoClient.preferences &&
-    typeof mercadopagoClient.preferences.create === "function"
-  ) {
-    return await mercadopagoClient.preferences.create(preferenceData);
-  }
-  // (b) Se existir método alternativo `createPreference`
-  if (typeof mercadopagoClient.createPreference === "function") {
-    return await mercadopagoClient.createPreference(preferenceData);
-  }
-  // (c) Se existir `create` direto
-  if (typeof mercadopagoClient.create === "function") {
-    return await mercadopagoClient.create(preferenceData);
-  }
-  throw new Error("SDK Mercado Pago: não encontrou método para criar preferência");
+  throw new Error("Não foi possível configurar o token do Mercado Pago");
 }
 
 exports.handler = async function (event) {
@@ -128,7 +66,8 @@ exports.handler = async function (event) {
       notification_url: `${process.env.SITE_URL}/.netlify/functions/mp_webhook`,
     };
 
-    const response = await criarPreferencia(preference);
+    // 2) Cria a preferência através de mercadopago.preferences.create(...)
+    const response = await mercadopago.preferences.create(preference);
     const init_point = response.body.init_point;
 
     return {
