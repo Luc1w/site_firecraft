@@ -1,10 +1,10 @@
-import mercadopago from 'mercadopago';
+const mercadopago = require('mercadopago');
 
 mercadopago.configure({
   access_token: process.env.MP_ACCESS_TOKEN,
 });
 
-export async function handler(event) {
+exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Método não permitido' };
   }
@@ -13,17 +13,17 @@ export async function handler(event) {
     const { nickname, email, produto } = JSON.parse(event.body);
 
     let price = 0;
-    if (produto === 'VIP') price = 10.0;
-    else if (produto === 'VIP+') price = 25.0;
-    else if (produto === 'VIP+ Permanente') price = 50.0;
+    if (produto === 'VIP') price = 10;
+    else if (produto === 'VIP+') price = 25;
+    else if (produto === 'VIP+ Permanente') price = 50;
     else throw new Error('Produto inválido');
 
     const preference = {
       items: [
         {
           title: produto,
-          unit_price: price,
           quantity: 1,
+          unit_price: price,
         },
       ],
       payer: {
@@ -45,9 +45,10 @@ export async function handler(event) {
       body: JSON.stringify({ init_point: response.body.init_point }),
     };
   } catch (error) {
+    console.error('Erro ao criar preferência:', error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: error.message }),
     };
   }
-}
+};

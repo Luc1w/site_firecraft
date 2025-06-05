@@ -1,9 +1,8 @@
 {
   "name": "firecraft-site",
   "version": "1.0.0",
-  "type": "module",
   "dependencies": {
-    "mercadopago": "^2.3.0",
+    "mercadopago": "^1.5.13",
     "node-fetch": "^2.6.7"
   }
 }
