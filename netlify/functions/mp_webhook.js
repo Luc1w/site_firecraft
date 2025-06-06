@@ -9,29 +9,31 @@ exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body);
 
-    // Garante que é uma notificação de pagamento
     if (body.type !== 'payment') {
       return { statusCode: 200, body: 'Not a payment notification' };
     }
 
     const paymentId = body.data.id;
-
     if (!paymentId) {
       console.error('❌ ID de pagamento ausente');
       return { statusCode: 400, body: 'Missing payment ID' };
     }
 
-    // Busca detalhes do pagamento
     const payment = await mercadopago.payment.findById(paymentId);
     const paymentData = payment.body;
 
-    // Só envia se o pagamento estiver aprovado
     if (paymentData.status === 'approved') {
-      const nickname = paymentData.additional_info?.payer?.first_name || 'Desconhecido';
       const email = paymentData.payer?.email || 'Email não informado';
       const produto = paymentData.description || 'Produto não especificado';
+      let nickname = 'Desconhecido';
 
-      // Envia pro Discord
+      // Recupera nickname da string adicional_info (ex: nickname=Zezinho&produto=VIP)
+      const info = paymentData.additional_info;
+      if (typeof info === 'string') {
+        const match = info.match(/nickname=([^&]+)/);
+        if (match) nickname = decodeURIComponent(match[1]);
+      }
+
       const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
       await fetch(webhookUrl, {
         method: 'POST',

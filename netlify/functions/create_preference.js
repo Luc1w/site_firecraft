@@ -1,5 +1,6 @@
 const fetch = require('node-fetch');
 const mercadopago = require('mercadopago');
+
 mercadopago.configure({ access_token: process.env.MP_ACCESS_TOKEN });
 
 exports.handler = async (event) => {
@@ -25,12 +26,17 @@ exports.handler = async (event) => {
         pending: `${siteUrl}/pendente.html`,
       },
       auto_return: 'approved',
+      payer: {
+        email: email,
+      },
+      additional_info: `nickname=${nickname}&produto=${produto}`,
+      description: produto,
     };
 
     const response = await mercadopago.preferences.create(preference);
     const initPoint = response.body.init_point;
 
-    // 🔔 Envia pro Discord quando o link é gerado
+    // Notifica no Discord
     await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
