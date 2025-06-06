@@ -1,51 +1,62 @@
+const fetch = require('node-fetch');
 const mercadopago = require('mercadopago');
-
-mercadopago.configure({
-  access_token: process.env.MP_ACCESS_TOKEN,
-});
+mercadopago.configure({ access_token: process.env.MP_ACCESS_TOKEN });
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Método não permitido' };
-  }
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  const siteUrl = process.env.SITE_URL;
 
   try {
-    const { nickname, email, produto } = JSON.parse(event.body);
-
-    let price = 0;
-    if (produto === 'VIP') price = 1;
-    else if (produto === 'VIP+') price = 25;
-    else if (produto === 'VIP+ Permanente') price = 50;
-    else throw new Error('Produto inválido');
+    const body = JSON.parse(event.body);
+    const { nickname, email, produto } = body;
 
     const preference = {
       items: [
         {
           title: produto,
+          unit_price: produto === 'VIP' ? 10 :
+                      produto === 'VIP+' ? 25 : 50,
           quantity: 1,
-          unit_price: price,
         },
       ],
-      payer: {
-        email,
-      },
       back_urls: {
-        success: `${process.env.SITE_URL}/success.html`,
-        failure: `${process.env.SITE_URL}/failure.html`,
+        success: `${siteUrl}/sucesso.html`,
+        failure: `${siteUrl}/erro.html`,
+        pending: `${siteUrl}/pendente.html`,
       },
       auto_return: 'approved',
-      external_reference: `${nickname}__${Date.now()}`,
-      notification_url: `${process.env.SITE_URL}/.netlify/functions/mp_webhook`,
     };
 
     const response = await mercadopago.preferences.create(preference);
+    const initPoint = response.body.init_point;
+
+    // 🔔 Envia pro Discord quando o link é gerado
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        embeds: [
+          {
+            title: '🛒 Nova tentativa de compra!',
+            color: 0x00ff00,
+            fields: [
+              { name: 'Nickname', value: nickname, inline: true },
+              { name: 'Email', value: email, inline: true },
+              { name: 'Produto', value: produto, inline: true },
+              { name: 'Status', value: 'Aguardando pagamento...', inline: true },
+            ],
+            timestamp: new Date(),
+          },
+        ],
+      }),
+    });
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ init_point: response.body.init_point }),
+      body: JSON.stringify({ init_point: initPoint }),
     };
   } catch (error) {
-    console.error('Erro ao criar preferência:', error);
+    console.error('Erro:', error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: error.message }),
