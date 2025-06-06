@@ -14,7 +14,7 @@ exports.handler = async (event) => {
       items: [
         {
           title: produto,
-          unit_price: produto === 'VIP' ? 10 :
+          unit_price: produto === 'VIP' ? 1 :
                       produto === 'VIP+' ? 25 : 50,
           quantity: 1,
         },
