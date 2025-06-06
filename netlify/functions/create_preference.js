@@ -29,7 +29,7 @@ exports.handler = async (event) => {
       payer: {
         email: email,
       },
-      metadata: `nickname=${nickname}&produto=${produto}`,
+      additional_info: `nickname=${nickname}&produto=${produto}`,
       description: produto,
     };
 
