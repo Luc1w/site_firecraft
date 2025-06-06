@@ -28,7 +28,7 @@ exports.handler = async (event) => {
       let nickname = 'Desconhecido';
 
       // Recupera nickname da string adicional_info (ex: nickname=Zezinho&produto=VIP)
-      const info = paymentData.additional_info;
+      const info = paymentData.metadata;
       if (typeof info === 'string') {
         const match = info.match(/nickname=([^&]+)/);
         if (match) nickname = decodeURIComponent(match[1]);

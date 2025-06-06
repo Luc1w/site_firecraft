@@ -15,7 +15,7 @@ exports.handler = async (event) => {
       items: [
         {
           title: produto,
-          unit_price: produto === 'VIP' ? 10 :
+          unit_price: produto === 'VIP' ? 1 :
                       produto === 'VIP+' ? 25 : 50,
           quantity: 1,
         },
@@ -29,7 +29,7 @@ exports.handler = async (event) => {
       payer: {
         email: email,
       },
-      additional_info: `nickname=${nickname}&produto=${produto}`,
+      metadata: `nickname=${nickname}&produto=${produto}`,
       description: produto,
     };
 
