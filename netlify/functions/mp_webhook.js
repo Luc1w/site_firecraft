@@ -25,14 +25,7 @@ exports.handler = async (event) => {
     if (paymentData.status === 'approved') {
       const email = paymentData.payer?.email || 'Email não informado';
       const produto = paymentData.description || 'Produto não especificado';
-      let nickname = 'Desconhecido';
-
-      // Recupera nickname da string adicional_info (ex: nickname=Zezinho&produto=VIP)
-      const info = paymentData.additional_info;
-      if (typeof info === 'string') {
-        const match = info.match(/nickname=([^&]+)/);
-        if (match) nickname = decodeURIComponent(match[1]);
-      }
+      const nickname = paymentData.metadata?.nickname || 'Desconhecido';
 
       const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
       await fetch(webhookUrl, {
