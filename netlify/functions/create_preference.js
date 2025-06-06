@@ -25,7 +25,7 @@ exports.handler = async function (event) {
     console.log("Parâmetros recebidos:", body);
 
     let preco = 0;
-    if (produto === "VIP") preco = 1;
+    if (produto === "VIP") preco = 10;
     else if (produto === "VIP+") preco = 25;
     else if (produto === "VIP+ Permanente") preco = 50;
     else return { statusCode: 400, body: "Produto inválido" };

@@ -1,64 +1,62 @@
-const mercadopago = require("mercadopago");
-const fetch = require("node-fetch");
+const fetch = require('node-fetch');
+const mercadopago = require('mercadopago');
 
-exports.handler = async function (event) {
+mercadopago.configure({
+  access_token: process.env.MP_ACCESS_TOKEN,
+});
+
+exports.handler = async (event) => {
   try {
-    const accessToken = process.env.MP_ACCESS_TOKEN;
-    const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
+    const body = JSON.parse(event.body);
 
-    if (!accessToken || !discordWebhookUrl) {
-      throw new Error("Variáveis de ambiente não configuradas.");
+    // Garante que é uma notificação de pagamento
+    if (body.type !== 'payment') {
+      return { statusCode: 200, body: 'Not a payment notification' };
     }
 
-    mercadopago.configure({ access_token: accessToken });
-
-    const body = JSON.parse(event.body);
-    const paymentId = body.data?.id;
+    const paymentId = body.data.id;
 
     if (!paymentId) {
-      throw new Error("ID do pagamento não encontrado.");
+      console.error('❌ ID de pagamento ausente');
+      return { statusCode: 400, body: 'Missing payment ID' };
     }
 
+    // Busca detalhes do pagamento
     const payment = await mercadopago.payment.findById(paymentId);
     const paymentData = payment.body;
 
-    if (paymentData.status !== "approved") {
-      return { statusCode: 200, body: "Pagamento não aprovado." };
+    // Só envia se o pagamento estiver aprovado
+    if (paymentData.status === 'approved') {
+      const nickname = paymentData.additional_info?.payer?.first_name || 'Desconhecido';
+      const email = paymentData.payer?.email || 'Email não informado';
+      const produto = paymentData.description || 'Produto não especificado';
+
+      // Envia pro Discord
+      const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          embeds: [
+            {
+              title: '✅ Pagamento Aprovado',
+              color: 0x00ff00,
+              fields: [
+                { name: 'Jogador', value: nickname, inline: true },
+                { name: 'Email', value: email, inline: true },
+                { name: 'Produto', value: produto, inline: true },
+                { name: 'Status', value: 'Aprovado' },
+              ],
+              timestamp: new Date(),
+            },
+          ],
+        }),
+      });
     }
 
-    const nickname = paymentData.additional_info?.payer?.first_name || "Desconhecido";
-    const email = paymentData.payer?.email || "Não informado";
-    const produto = paymentData.description || "Não especificado";
-
-    const discordPayload = {
-      embeds: [
-        {
-          title: "✅ Pagamento Aprovado",
-          color: 3066993,
-          fields: [
-            { name: "Jogador", value: nickname, inline: true },
-            { name: "Email", value: email, inline: true },
-            { name: "Produto", value: produto, inline: true },
-            { name: "Status", value: paymentData.status, inline: true }
-          ],
-          timestamp: new Date().toISOString()
-        }
-      ]
-    };
-
-    await fetch(discordWebhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(discordPayload)
-    });
-
-    return { statusCode: 200, body: "Notificação enviada com sucesso." };
-
+    return { statusCode: 200, body: 'Webhook recebido com sucesso' };
   } catch (error) {
-    console.error("Erro no webhook:", error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "Erro no Webhook" })
-    };
+    console.error('❌ Erro no webhook:', error);
+    return { statusCode: 500, body: 'Erro interno' };
   }
 };
