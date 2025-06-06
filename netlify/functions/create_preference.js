@@ -1,67 +1,51 @@
-const fetch = require('node-fetch');
 const mercadopago = require('mercadopago');
 
-mercadopago.configure({ access_token: process.env.MP_ACCESS_TOKEN });
+mercadopago.configure({
+  access_token: process.env.MP_ACCESS_TOKEN
+});
 
-exports.handler = async (event) => {
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
-  const siteUrl = process.env.SITE_URL;
+exports.handler = async function (event, context) {
+  console.log("create_preference chamado");
+
+  const { nickname, email, produto } = JSON.parse(event.body || '{}');
+  const SITE_URL = process.env.SITE_URL || 'https://fire-craft.netlify.app';
+
+  const valores = {
+    'VIP': 10,
+    'VIP+': 25,
+    'VIP+ Permanente': 50
+  };
+
+  const price = valores[produto] || 0;
+  if (!price) return { statusCode: 400, body: 'Produto inválido' };
+
+  const preference = {
+    items: [{
+      title: `Compra de ${produto} – Fire Craft`,
+      quantity: 1,
+      unit_price: price
+    }],
+    back_urls: {
+      success: `${SITE_URL}/sucesso.html`,
+      failure: `${SITE_URL}/erro.html`,
+      pending: `${SITE_URL}/aguardando.html`
+    },
+    auto_return: "approved",
+    metadata: {
+      nickname,
+      email,
+      produto
+    }
+  };
 
   try {
-    const body = JSON.parse(event.body);
-    const { nickname, email, produto } = body;
-
-    const preference = {
-      items: [
-        {
-          title: produto,
-          unit_price: produto === 'VIP' ? 10 : produto === 'VIP+' ? 25 : 50,
-          quantity: 1,
-        },
-      ],
-      payer: { email },
-      back_urls: {
-        success: `${siteUrl}/sucesso.html`,
-        failure: `${siteUrl}/erro.html`,
-        pending: `${siteUrl}/pendente.html`,
-      },
-      auto_return: 'approved',
-      additional_info: `nickname=${nickname}&produto=${produto}`,
-      description: produto,
-    };
-
     const response = await mercadopago.preferences.create(preference);
-    const initPoint = response.body.init_point;
-
-    await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        embeds: [
-          {
-            title: '🛒 Nova tentativa de compra!',
-            color: 0x00ff00,
-            fields: [
-              { name: 'Nickname', value: nickname, inline: true },
-              { name: 'Email', value: email, inline: true },
-              { name: 'Produto', value: produto, inline: true },
-              { name: 'Status', value: 'Aguardando pagamento...', inline: true },
-            ],
-            timestamp: new Date(),
-          },
-        ],
-      }),
-    });
-
     return {
       statusCode: 200,
-      body: JSON.stringify({ init_point: initPoint }),
+      body: JSON.stringify({ init_point: response.body.init_point })
     };
   } catch (error) {
-    console.error('Erro:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
-    };
+    console.error("Erro ao criar preferência:", error);
+    return { statusCode: 500, body: 'Erro ao criar link de pagamento' };
   }
 };
